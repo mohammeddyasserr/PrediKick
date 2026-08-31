@@ -116,20 +116,23 @@ def recalculate_match_prediction_points(
             profile.total_points += new_points
 
 
-def sync_matches_from_fpl(db: Session):
+def sync_matches_from_fpl(db: Session) -> dict:
+    fpl_minutes_map = {}
     try:
         response = httpx.get(FPL_FIXTURES_URL, timeout=5.0)
         if response.status_code != 200:
-            return
+            return fpl_minutes_map
         fixtures = response.json()
     except Exception:
-        return
+        return fpl_minutes_map
 
-    fixtures_map = {
-        (f["team_h"], f["team_a"]): f
-        for f in fixtures
-        if isinstance(f, dict) and "team_h" in f and "team_a" in f
-    }
+    fixtures_map = {}
+    for f in fixtures:
+        if isinstance(f, dict) and "team_h" in f and "team_a" in f:
+            key = (f["team_h"], f["team_a"])
+            fixtures_map[key] = f
+            if f.get("minutes") is not None:
+                fpl_minutes_map[key] = f.get("minutes")
 
     active_matches = (
         db.query(Match)
@@ -164,6 +167,8 @@ def sync_matches_from_fpl(db: Session):
     if updated:
         db.commit()
 
+    return fpl_minutes_map
+
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 
@@ -184,7 +189,7 @@ def get_matches(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    sync_matches_from_fpl(db)
+    fpl_minutes_map = sync_matches_from_fpl(db)
 
     matches = (
         db.query(Match)
@@ -213,7 +218,9 @@ def get_matches(
 
             "kickoff_time": match.kickoff_time,
 
-            "status": match.status
+            "status": match.status,
+
+            "minutes": fpl_minutes_map.get((match.team_h, match.team_a)) if match.status == "started" else None
         }
         for match in matches
     ]

@@ -12,6 +12,15 @@ function decodePayload(token) {
   }
 }
 
+function formatKickoff(dt) {
+  if (!dt) return ''
+  const d = new Date(dt)
+  const day = d.toLocaleDateString(undefined, { weekday: 'short' })
+  const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+  return `${day}, ${dateStr} • ${timeStr}`
+}
+
 function Predictions({ token }) {
   const [matches, setMatches] = useState([])
   const [preds, setPreds] = useState([])
@@ -134,7 +143,11 @@ function Predictions({ token }) {
           </div>
         </div>
         <div className="actions">
-          {started && <span className="badge started">In progress</span>}
+          {started && (
+            <span className="badge started">
+              {match.minutes != null ? `In progress (${match.minutes}')` : 'In progress'}
+            </span>
+          )}
           {ended && <span className="badge ended">Calculated</span>}
           {!started && !ended && <span className="badge scheduled">Scheduled</span>}
           {ended && entry && <span className="points">You got: {entry.points}</span>}
@@ -142,6 +155,9 @@ function Predictions({ token }) {
           {canPredict && (
             <button id={`btn-${match.id}`} onClick={() => createPrediction(match.id)} disabled={isSameAsExisting}>{'Predict'}</button>
           )}
+        </div>
+        <div className="match-footer" style={{ textAlign: 'center', fontSize: '12px', color: 'var(--pl-text-muted)', paddingTop: '6px', borderTop: '1px dashed #e3e3e3' }}>
+          {formatKickoff(match.kickoff_time)}
         </div>
       </div>
     )
