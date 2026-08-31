@@ -242,11 +242,6 @@ def update_match(
     # NEW MATCH VALUES
     # =========================
 
-    new_status = update_data.get(
-        "status",
-        match.status
-    )
-
     new_team_h_score = update_data.get(
         "team_h_score",
         match.team_h_score
@@ -256,6 +251,15 @@ def update_match(
         "team_a_score",
         match.team_a_score
     )
+
+    if new_team_h_score is not None and new_team_a_score is not None:
+        new_status = "ended"
+        update_data["status"] = "ended"
+    else:
+        new_status = update_data.get(
+            "status",
+            match.status
+        )
 
     # =========================
     # VALIDATE ENDED MATCH

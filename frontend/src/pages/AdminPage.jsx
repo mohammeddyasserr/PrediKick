@@ -70,8 +70,7 @@ export default function AdminPage(){
       event: m.event,
       kickoff_time: toLocalInput(m.kickoff_time),
       team_h_score: m.team_h_score ?? '',
-      team_a_score: m.team_a_score ?? '',
-      status: m.status
+      team_a_score: m.team_a_score ?? ''
     })
   }
 
@@ -86,9 +85,7 @@ export default function AdminPage(){
       if(form.team_h_score !== '') payload.team_h_score = form.team_h_score === '' ? null : Number(form.team_h_score)
       if(form.team_a_score !== '') payload.team_a_score = form.team_a_score === '' ? null : Number(form.team_a_score)
       if(form.team_h_score !== '' && form.team_a_score !== '' && form.team_h_score !== null && form.team_a_score !== null) {
-        payload.status = form.status === 'scheduled' ? 'ended' : (form.status || 'ended')
-      } else if(form.status) {
-        payload.status = form.status
+        payload.status = 'ended'
       }
 
       await api.put(`/matches/${editing}`, payload)
@@ -142,14 +139,6 @@ export default function AdminPage(){
         <div>
           <label>Kickoff</label>
           <input type="datetime-local" value={form.kickoff_time} onChange={(e)=>setForm({...form, kickoff_time:e.target.value})} />
-        </div>
-        <div>
-          <label>Status</label>
-          <select value={form.status || 'scheduled'} onChange={(e)=>setForm({...form, status:e.target.value})}>
-            <option value="scheduled">scheduled</option>
-            <option value="started">started</option>
-            <option value="ended">ended</option>
-          </select>
         </div>
         <div>
           <label>Home Score</label>
