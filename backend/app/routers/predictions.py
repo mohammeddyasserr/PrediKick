@@ -10,6 +10,7 @@ from app.schemas.prediction import (
     PredictionResponse
 )
 from app.dependencies.auth import get_current_user
+from app.routers.matches import is_kickoff_passed
 
 
 router = APIRouter(
@@ -62,11 +63,15 @@ def create_prediction(
             detail="Match not found"
         )
 
-    # Cannot predict an ended match
-    if match.status == "ended":
+    # Auto-update status if scheduled match kickoff passed
+    if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
+        match.status = "started"
+        db.commit()
+
+    if match.status != "scheduled":
         raise HTTPException(
             status_code=400,
-            detail="Cannot predict an ended match"
+            detail="Cannot predict a match that has already started or ended"
         )
 
     # Check if user already predicted this match
@@ -226,11 +231,15 @@ def update_prediction(
             detail="Match not found"
         )
 
-    # Cannot update after match ended
-    if match.status == "ended":
+    # Auto-update status if scheduled match kickoff passed
+    if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
+        match.status = "started"
+        db.commit()
+
+    if match.status != "scheduled":
         raise HTTPException(
             status_code=400,
-            detail="Cannot modify prediction after match ended"
+            detail="Cannot modify prediction after match kickoff"
         )
 
     prediction.predicted_team_h_score = (

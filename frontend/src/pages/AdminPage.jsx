@@ -85,7 +85,11 @@ export default function AdminPage(){
       if(form.kickoff_time) payload.kickoff_time = new Date(form.kickoff_time).toISOString()
       if(form.team_h_score !== '') payload.team_h_score = form.team_h_score === '' ? null : Number(form.team_h_score)
       if(form.team_a_score !== '') payload.team_a_score = form.team_a_score === '' ? null : Number(form.team_a_score)
-      if(form.status) payload.status = form.status
+      if(form.team_h_score !== '' && form.team_a_score !== '' && form.team_h_score !== null && form.team_a_score !== null) {
+        payload.status = form.status === 'scheduled' ? 'ended' : (form.status || 'ended')
+      } else if(form.status) {
+        payload.status = form.status
+      }
 
       await api.put(`/matches/${editing}`, payload)
       setEditing(null)

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import os
@@ -21,6 +22,16 @@ router = APIRouter(
     prefix="/matches",
     tags=["Matches"]
 )
+
+
+def is_kickoff_passed(kickoff_time: datetime) -> bool:
+    if not kickoff_time:
+        return False
+    if kickoff_time.tzinfo is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+    else:
+        now = datetime.now(timezone.utc)
+    return kickoff_time <= now
 
 
 # =========================
@@ -91,6 +102,15 @@ def get_matches(
         )
         .all()
     )
+
+    updated = False
+    for match in matches:
+        if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
+            match.status = "started"
+            updated = True
+
+    if updated:
+        db.commit()
 
     return [
         {
