@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+import os
 from app.database import get_db
 from app.models.match import Match
 from app.models.prediction import Prediction
@@ -64,6 +64,16 @@ def calculate_prediction_points(
     return 0
 
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+
+
+def get_team_logo(team_id: int):
+    return (
+        f"{SUPABASE_URL}/storage/v1/object/public/"
+        f"teams-logos/{team_id}.png"
+    )
+
+
 # =========================
 # GET ALL MATCHES
 # =========================
@@ -91,9 +101,11 @@ def get_matches(
             "team_h": match.team_h,
             "team_h_name": TEAM_NAMES[Team(match.team_h)],
             "team_h_score": match.team_h_score,
+            "team_h_logo": get_team_logo(match.team_h),
 
             "team_a": match.team_a,
             "team_a_name": TEAM_NAMES[Team(match.team_a)],
+            "team_a_logo": get_team_logo(match.team_a),
             "team_a_score": match.team_a_score,
 
             "kickoff_time": match.kickoff_time,
