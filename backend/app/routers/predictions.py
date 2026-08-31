@@ -10,7 +10,7 @@ from app.schemas.prediction import (
     PredictionResponse
 )
 from app.dependencies.auth import get_current_user
-from app.routers.matches import is_kickoff_passed
+from app.routers.matches import sync_matches_from_fpl
 
 
 router = APIRouter(
@@ -63,10 +63,9 @@ def create_prediction(
             detail="Match not found"
         )
 
-    # Auto-update status if scheduled match kickoff passed
-    if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
-        match.status = "started"
-        db.commit()
+    # Sync latest match status from FPL
+    sync_matches_from_fpl(db)
+    db.refresh(match)
 
     if match.status != "scheduled":
         raise HTTPException(
@@ -231,10 +230,9 @@ def update_prediction(
             detail="Match not found"
         )
 
-    # Auto-update status if scheduled match kickoff passed
-    if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
-        match.status = "started"
-        db.commit()
+    # Sync latest match status from FPL
+    sync_matches_from_fpl(db)
+    db.refresh(match)
 
     if match.status != "scheduled":
         raise HTTPException(

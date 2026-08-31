@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import httpx
 import os
 from app.database import get_db
 from app.models.match import Match
@@ -24,14 +25,7 @@ router = APIRouter(
 )
 
 
-def is_kickoff_passed(kickoff_time: datetime) -> bool:
-    if not kickoff_time:
-        return False
-    if kickoff_time.tzinfo is None:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-    else:
-        now = datetime.now(timezone.utc)
-    return kickoff_time <= now
+FPL_FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/"
 
 
 # =========================
@@ -75,6 +69,102 @@ def calculate_prediction_points(
     return 0
 
 
+def recalculate_match_prediction_points(
+    match: Match,
+    new_team_h_score: int,
+    new_team_a_score: int,
+    db: Session
+):
+    predictions = (
+        db.query(Prediction)
+        .filter(
+            Prediction.match_id == match.id
+        )
+        .all()
+    )
+
+    for prediction in predictions:
+        if prediction.points_calculated:
+            profile = (
+                db.query(Profile)
+                .filter(
+                    Profile.id == prediction.user_id
+                )
+                .first()
+            )
+            if profile:
+                profile.total_points -= prediction.points
+
+        new_points = calculate_prediction_points(
+            prediction.predicted_team_h_score,
+            prediction.predicted_team_a_score,
+            new_team_h_score,
+            new_team_a_score
+        )
+
+        prediction.points = new_points
+        prediction.points_calculated = True
+
+        profile = (
+            db.query(Profile)
+            .filter(
+                Profile.id == prediction.user_id
+            )
+            .first()
+        )
+        if profile:
+            profile.total_points += new_points
+
+
+def sync_matches_from_fpl(db: Session):
+    try:
+        response = httpx.get(FPL_FIXTURES_URL, timeout=5.0)
+        if response.status_code != 200:
+            return
+        fixtures = response.json()
+    except Exception:
+        return
+
+    fixtures_map = {
+        (f["team_h"], f["team_a"]): f
+        for f in fixtures
+        if isinstance(f, dict) and "team_h" in f and "team_a" in f
+    }
+
+    active_matches = (
+        db.query(Match)
+        .filter(Match.status.in_(["scheduled", "started"]))
+        .all()
+    )
+
+    updated = False
+    for match in active_matches:
+        fpl_fix = fixtures_map.get((match.team_h, match.team_a))
+        if not fpl_fix:
+            continue
+
+        started_in_fpl = fpl_fix.get("started") is True
+        finished_in_fpl = (
+            fpl_fix.get("finished") is True
+            or fpl_fix.get("finished_provisional") is True
+        )
+        score_h = fpl_fix.get("team_h_score")
+        score_a = fpl_fix.get("team_a_score")
+
+        if finished_in_fpl and score_h is not None and score_a is not None:
+            match.team_h_score = score_h
+            match.team_a_score = score_a
+            match.status = "ended"
+            recalculate_match_prediction_points(match, score_h, score_a, db)
+            updated = True
+        elif match.status == "scheduled" and started_in_fpl:
+            match.status = "started"
+            updated = True
+
+    if updated:
+        db.commit()
+
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 
 
@@ -94,6 +184,8 @@ def get_matches(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+    sync_matches_from_fpl(db)
+
     matches = (
         db.query(Match)
         .order_by(
@@ -102,15 +194,6 @@ def get_matches(
         )
         .all()
     )
-
-    updated = False
-    for match in matches:
-        if match.status == "scheduled" and is_kickoff_passed(match.kickoff_time):
-            match.status = "started"
-            updated = True
-
-    if updated:
-        db.commit()
 
     return [
         {
@@ -301,66 +384,7 @@ def update_match(
         and new_team_h_score is not None
         and new_team_a_score is not None
     ):
-
-        predictions = (
-            db.query(Prediction)
-            .filter(
-                Prediction.match_id == match.id
-            )
-            .all()
-        )
-
-        for prediction in predictions:
-
-            # -------------------------
-            # REMOVE OLD POINTS
-            # -------------------------
-
-            if prediction.points_calculated:
-
-                profile = (
-                    db.query(Profile)
-                    .filter(
-                        Profile.id == prediction.user_id
-                    )
-                    .first()
-                )
-
-                if profile:
-                    profile.total_points -= prediction.points
-
-            # -------------------------
-            # CALCULATE NEW POINTS
-            # -------------------------
-
-            new_points = calculate_prediction_points(
-                prediction.predicted_team_h_score,
-                prediction.predicted_team_a_score,
-                new_team_h_score,
-                new_team_a_score
-            )
-
-            # -------------------------
-            # SAVE NEW POINTS
-            # -------------------------
-
-            prediction.points = new_points
-            prediction.points_calculated = True
-
-            # -------------------------
-            # ADD NEW POINTS
-            # -------------------------
-
-            profile = (
-                db.query(Profile)
-                .filter(
-                    Profile.id == prediction.user_id
-                )
-                .first()
-            )
-
-            if profile:
-                profile.total_points += new_points
+        recalculate_match_prediction_points(match, new_team_h_score, new_team_a_score, db)
 
     db.commit()
     db.refresh(match)
