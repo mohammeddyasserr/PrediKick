@@ -107,11 +107,31 @@ function Predictions({ token }) {
     return (
       <div key={match.id} className="match">
         <div className="teams">
-          <div className="team">{match.team_h_name}</div>
+          <div className="team home-team">
+            <span className="team-name">{match.team_h_name}</span>
+            {match.team_h_logo && (
+              <img
+                src={match.team_h_logo}
+                alt={match.team_h_name}
+                className="team-logo"
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
+            )}
+          </div>
           <input id={`h-${match.id}`} value={predicted_h} disabled={!canPredict} onChange={(e) => setInputs({ ...inputs, [match.id]: { ...(inputs[match.id] || {}), h: e.target.value } })} />
           <span>vs</span>
           <input id={`a-${match.id}`} value={predicted_a} disabled={!canPredict} onChange={(e) => setInputs({ ...inputs, [match.id]: { ...(inputs[match.id] || {}), a: e.target.value } })} />
-          <div className="team">{match.team_a_name}</div>
+          <div className="team away-team">
+            {match.team_a_logo && (
+              <img
+                src={match.team_a_logo}
+                alt={match.team_a_name}
+                className="team-logo"
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
+            )}
+            <span className="team-name">{match.team_a_name}</span>
+          </div>
         </div>
         <div className="actions">
           {started && <span className="badge started">In progress</span>}

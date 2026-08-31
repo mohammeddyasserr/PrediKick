@@ -192,6 +192,33 @@ h3 {
   }
 }
 
+@media(max-width: 600px) {
+  .teams .team {
+    font-size: 14px;
+    gap: 6px;
+  }
+  .teams .team.home-team {
+    padding-right: 6px;
+  }
+  .teams .team.away-team {
+    padding-left: 6px;
+  }
+  .team-logo {
+    width: 28px;
+    height: 28px;
+  }
+  .teams span {
+    margin: 0 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+  .teams input {
+    width: 45px;
+    height: 38px;
+    font-size: 16px;
+  }
+}
+
 /* Match Card */
 .match {
   background: var(--pl-card-bg);
@@ -223,20 +250,48 @@ h3 {
   font-weight: 700;
   color: var(--pl-plum);
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.teams .team.home-team {
+  justify-content: flex-end;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.teams .team.away-team {
+  justify-content: flex-start;
+  text-align: left;
+  padding-left: 12px;
+}
+
+.team-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.teams .team:first-child {
-  text-align: right;
-  padding-right: 12px;
+.team-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
-.teams .team:last-child {
-  text-align: left;
-  padding-left: 12px;
+.match:hover .team-logo {
+  transform: scale(1.08);
+}
+
+.admin-team-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .teams span {
@@ -248,6 +303,7 @@ h3 {
   padding: 4px 8px;
   border-radius: 6px;
   margin: 0 8px;
+  flex-shrink: 0;
 }
 
 .teams input {

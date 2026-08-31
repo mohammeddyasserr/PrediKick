@@ -187,14 +187,32 @@ export default function AdminPage(){
         {filteredMatches.length > 0 ? (
           filteredMatches.map(m=> (
             <div key={m.id} className="match admin-match">
-              <div>
-                <span style={{ color: '#888', marginRight: '8px' }}>#{m.id}</span>
-                <strong>{m.team_h_name} vs {m.team_a_name}</strong>
-                <span className={`badge ${m.status}`} style={{ marginLeft: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ color: '#888', marginRight: '4px' }}>#{m.id}</span>
+                {m.team_h_logo && (
+                  <img
+                    src={m.team_h_logo}
+                    alt={m.team_h_name}
+                    className="admin-team-logo"
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                )}
+                <strong>{m.team_h_name}</strong>
+                <span style={{ color: '#888', fontSize: '13px' }}>vs</span>
+                {m.team_a_logo && (
+                  <img
+                    src={m.team_a_logo}
+                    alt={m.team_a_name}
+                    className="admin-team-logo"
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                )}
+                <strong>{m.team_a_name}</strong>
+                <span className={`badge ${m.status}`} style={{ marginLeft: '8px' }}>
                   {m.status}
                 </span>
                 {(m.status === 'ended' || m.team_h_score !== null) && (
-                  <span style={{ marginLeft: '12px', fontWeight: 'bold' }}>
+                  <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>
                     ({m.team_h_score ?? '-'} - {m.team_a_score ?? '-'})
                   </span>
                 )}
