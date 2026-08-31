@@ -21,6 +21,30 @@ export default function AuthPage({ onLogin }) {
 
     try {
       if (isRegister) {
+        const username = form.username;
+        const password = form.password;
+
+        if (username.length < 3 || username.length > 20) {
+          setErr('Username must be between 3 and 20 characters long.');
+          return;
+        }
+        if (!/^[a-zA-Z]/.test(username)) {
+          setErr('Username must start with a letter.');
+          return;
+        }
+        if (username.endsWith('_')) {
+          setErr('Username cannot end with an underscore.');
+          return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+          setErr('Username can only contain letters, numbers, and underscores (no spaces or special characters).');
+          return;
+        }
+        if (password.length < 8) {
+          setErr('Password must be at least 8 characters long.');
+          return;
+        }
+
         const res = await api.post('/auth/register', {
           username: form.username,
           email: form.email,

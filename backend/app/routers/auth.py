@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from supabase import create_client, Client
 import os
+import re
 
 from app.database import get_db
 from app.schemas.auth import RegisterRequest, LoginRequest
@@ -18,7 +20,61 @@ supabase: Client = create_client(
 
 
 @router.post("/register")
-def register(data: RegisterRequest):
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+
+    # 1. Validate username format
+    username = data.username
+    if not (3 <= len(username) <= 20):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be between 3 and 20 characters long."
+        )
+    if not re.match(r'^[a-zA-Z]', username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must start with a letter."
+        )
+    if username.endswith('_'):
+        raise HTTPException(
+            status_code=400,
+            detail="Username cannot end with an underscore."
+        )
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username can only contain letters, numbers, and underscores (no spaces or special characters)."
+        )
+
+    # 2. Validate password length
+    if len(data.password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long."
+        )
+
+    # 3. Check username uniqueness case-insensitively
+    existing_user = (
+        db.query(Profile)
+        .filter(func.lower(Profile.username) == func.lower(username))
+        .first()
+    )
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username is already taken."
+        )
+
+    # 4. Check email uniqueness case-insensitively
+    existing_email = (
+        db.query(Profile)
+        .filter(func.lower(Profile.email) == func.lower(data.email))
+        .first()
+    )
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Email is already registered."
+        )
 
     try:
         response = supabase.auth.admin.create_user({
@@ -56,7 +112,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
     profile = (
         db.query(Profile)
-        .filter(Profile.username == data.username)
+        .filter(func.lower(Profile.username) == func.lower(data.username))
         .first()
     )
 

@@ -66,7 +66,7 @@ def get_user_rank(username: str, db: Session = Depends(get_db)):
         else:
             rank = last_rank
 
-        if p.username == username:
+        if p.username.lower() == username.lower():
             return {
                 "id": p.id,
                 "username": p.username,
