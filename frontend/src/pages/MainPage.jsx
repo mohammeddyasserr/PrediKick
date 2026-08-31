@@ -115,6 +115,9 @@ function Predictions({ token }) {
 
     return (
       <div key={match.id} className="match">
+        <div className="match-kickoff" style={{ textAlign: 'center', fontSize: '12px', color: 'var(--pl-text-muted)', paddingBottom: '6px', borderBottom: '1px dashed #e3e3e3', marginBottom: '4px' }}>
+          {formatKickoff(match.kickoff_time)}
+        </div>
         <div className="teams">
           <div className="team home-team">
             <span className="team-name">{match.team_h_name}</span>
@@ -155,9 +158,6 @@ function Predictions({ token }) {
           {canPredict && (
             <button id={`btn-${match.id}`} onClick={() => createPrediction(match.id)} disabled={isSameAsExisting}>{'Predict'}</button>
           )}
-        </div>
-        <div className="match-footer" style={{ textAlign: 'center', fontSize: '12px', color: 'var(--pl-text-muted)', paddingTop: '6px', borderTop: '1px dashed #e3e3e3' }}>
-          {formatKickoff(match.kickoff_time)}
         </div>
       </div>
     )
