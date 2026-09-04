@@ -8,7 +8,7 @@ from app.routers.auth import router as auth_router
 from app.routers.matches import router as matches_router
 from app.routers.predictions import router as predictions_router
 from app.routers.rank import router as rank_router
-
+from app.routers.internal import router as internal_router
 
 app = FastAPI()
 
@@ -27,6 +27,8 @@ app.include_router(auth_router)
 app.include_router(matches_router)
 app.include_router(predictions_router)
 app.include_router(rank_router)
+app.include_router(internal_router)
+
 
 
 @app.get("/")
