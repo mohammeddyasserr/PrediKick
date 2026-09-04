@@ -1,9 +1,8 @@
 import jwt
 from jwt import PyJWKClient
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -16,22 +15,13 @@ SUPABASE_JWKS_URL = (
 
 jwks_client = PyJWKClient(SUPABASE_JWKS_URL)
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer()
 
 
 def get_current_user(
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    token = credentials.credentials if credentials else None
-    if not token:
-        token = request.cookies.get("access_token")
-
-    if not token:
-        raise HTTPException(
-            status_code=401,
-            detail="Missing authentication"
-        )
+    token = credentials.credentials
 
     try:
         signing_key = jwks_client.get_signing_key_from_jwt(token)

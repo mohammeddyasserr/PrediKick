@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from supabase import create_client, Client
@@ -12,28 +11,6 @@ from app.models.profiles import Profile
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-
-def set_auth_cookies(response: JSONResponse, access_token: str, refresh_token: str):
-    is_prod = os.getenv("APP_ENV", "development") == "production"
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=is_prod,
-        samesite="lax",
-        path="/",
-        max_age=60 * 60,
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=is_prod,
-        samesite="lax",
-        path="/",
-        max_age=60 * 60 * 24 * 7,
-    )
 
 
 supabase: Client = create_client(
@@ -157,17 +134,11 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             "password": data.password
         })
 
-        payload = {
-            "message": "Login successful",
-            "username": profile.username,
+        return {
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token,
+            "token_type": "bearer"
         }
-        final_response = JSONResponse(content=payload)
-        set_auth_cookies(
-            final_response,
-            response.session.access_token,
-            response.session.refresh_token
-        )
-        return final_response
 
     except Exception as e:
         print("SUPABASE LOGIN ERROR:", e)
@@ -176,40 +147,3 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             status_code=401,
             detail="Invalid username or password"
         )
-
-
-@router.post("/refresh")
-def refresh_session(request: Request):
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Session expired"
-        )
-
-    try:
-        response = supabase.auth.refresh_session({
-            "refresh_token": refresh_token
-        })
-
-        payload = JSONResponse({"message": "Session refreshed"})
-        set_auth_cookies(
-            payload,
-            response.session.access_token,
-            response.session.refresh_token,
-        )
-        return payload
-    except Exception as e:
-        print("SUPABASE REFRESH ERROR:", e)
-        cleared = JSONResponse({"detail": "Session expired"}, status_code=401)
-        cleared.delete_cookie("access_token", path="/")
-        cleared.delete_cookie("refresh_token", path="/")
-        return cleared
-
-
-@router.post("/logout")
-def logout():
-    response = JSONResponse({"message": "Logged out"})
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/")
-    return response
