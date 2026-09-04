@@ -15,18 +15,6 @@ class PredictionCreate(BaseModel):
     )
 
 
-class PredictionUpdate(BaseModel):
-    predicted_team_h_score: int = Field(
-        ge=0,
-        description="Predicted home team score"
-    )
-
-    predicted_team_a_score: int = Field(
-        ge=0,
-        description="Predicted away team score"
-    )
-
-
 class PredictionResponse(BaseModel):
     id: int
     match_id: int

@@ -6,7 +6,6 @@ from app.models.prediction import Prediction
 from app.models.match import Match
 from app.schemas.prediction import (
     PredictionCreate,
-    PredictionUpdate,
     PredictionResponse
 )
 from app.dependencies.auth import get_current_user
@@ -73,7 +72,7 @@ def create_prediction(
             detail="Cannot predict a match that has already started or ended"
         )
 
-    # Check if user already predicted this match
+    # If an existing prediction already exists for this match, update it instead
     existing_prediction = (
         db.query(Prediction)
         .filter(
@@ -84,10 +83,11 @@ def create_prediction(
     )
 
     if existing_prediction:
-        raise HTTPException(
-            status_code=400,
-            detail="You already predicted this match"
-        )
+        existing_prediction.predicted_team_h_score = data.predicted_team_h_score
+        existing_prediction.predicted_team_a_score = data.predicted_team_a_score
+        db.commit()
+        db.refresh(existing_prediction)
+        return existing_prediction
 
     prediction = Prediction(
         user_id=user_id,
@@ -177,78 +177,3 @@ def get_prediction(
 
     return prediction
 
-
-# =========================
-# UPDATE PREDICTION
-# =========================
-
-@router.put(
-    "/{prediction_id}",
-    response_model=PredictionResponse
-)
-def update_prediction(
-    prediction_id: int,
-    data: PredictionUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
-):
-    user_id = _current_user_id(current_user)
-
-    if not user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authenticated user"
-        )
-
-    prediction = (
-        db.query(Prediction)
-        .filter(
-            Prediction.id == prediction_id,
-            Prediction.user_id == user_id
-        )
-        .first()
-    )
-
-    if not prediction:
-        raise HTTPException(
-            status_code=404,
-            detail="Prediction not found"
-        )
-
-    # Get match
-    match = (
-        db.query(Match)
-        .filter(
-            Match.id == prediction.match_id
-        )
-        .first()
-    )
-
-    if not match:
-        raise HTTPException(
-            status_code=404,
-            detail="Match not found"
-        )
-
-    # Sync latest match status from FPL
-    sync_matches_from_fpl(db)
-    db.refresh(match)
-
-    if match.status != "scheduled":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot modify prediction after match kickoff"
-        )
-
-    prediction.predicted_team_h_score = (
-        data.predicted_team_h_score
-    )
-
-    prediction.predicted_team_a_score = (
-        data.predicted_team_a_score
-    )
-
-    db.commit()
-    db.refresh(prediction)
-
-    return prediction

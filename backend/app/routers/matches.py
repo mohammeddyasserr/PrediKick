@@ -184,6 +184,24 @@ def get_team_logo(team_id: int):
     )
 
 
+def get_all_team_logos() -> list[dict]:
+    if not SUPABASE_URL:
+        return []
+
+    return [
+        {
+            "team_id": int(team.value),
+            "logo_url": get_team_logo(team.value),
+        }
+        for team in Team
+    ]
+
+
+@router.get("/logos")
+def get_team_logos_api():
+    return get_all_team_logos()
+
+
 # =========================
 # GET ALL MATCHES
 # =========================
@@ -207,23 +225,15 @@ def get_matches(
     return [
         {
             "id": match.id,
-
             "event": match.event,
-
             "team_h": match.team_h,
             "team_h_name": TEAM_NAMES[Team(match.team_h)],
             "team_h_score": match.team_h_score,
-            "team_h_logo": get_team_logo(match.team_h),
-
             "team_a": match.team_a,
             "team_a_name": TEAM_NAMES[Team(match.team_a)],
-            "team_a_logo": get_team_logo(match.team_a),
             "team_a_score": match.team_a_score,
-
             "kickoff_time": match.kickoff_time,
-
             "status": match.status,
-
             "minutes": fpl_minutes_map.get((match.team_h, match.team_a)) if match.status == "started" else None
         }
         for match in matches

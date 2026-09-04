@@ -21,7 +21,7 @@ function formatKickoff(dt) {
   return `${day}, ${dateStr} • ${timeStr}`
 }
 
-function Predictions({ token }) {
+function Predictions({ token, teamLogos }) {
   const [matches, setMatches] = useState([])
   const [preds, setPreds] = useState([])
   const [local, setLocal] = useState({})
@@ -74,27 +74,18 @@ function Predictions({ token }) {
   }, [])
 
   async function createPrediction(matchId) {
-    const entry = local[matchId]
     const team_h = inputs[matchId]?.h || '0'
     const team_a = inputs[matchId]?.a || '0'
 
     try {
-      if (entry && entry.id) {
-        const res = await api.put(`/predictions/${entry.id}`, {
-          predicted_team_h_score: Number(team_h || 0),
-          predicted_team_a_score: Number(team_a || 0)
-        })
-        setLocal({ ...local, [matchId]: res })
-        setInputs({ ...inputs, [matchId]: { h: String(res.predicted_team_h_score), a: String(res.predicted_team_a_score) } })
-      } else {
-        const res = await api.post('/predictions/', {
-          match_id: matchId,
-          predicted_team_h_score: Number(team_h || 0),
-          predicted_team_a_score: Number(team_a || 0)
-        })
-        setLocal({ ...local, [matchId]: res })
-        setInputs({ ...inputs, [matchId]: { h: String(res.predicted_team_h_score), a: String(res.predicted_team_a_score) } })
-      }
+      const res = await api.post('/predictions/', {
+        match_id: matchId,
+        predicted_team_h_score: Number(team_h || 0),
+        predicted_team_a_score: Number(team_a || 0)
+      })
+
+      setLocal({ ...local, [matchId]: res })
+      setInputs({ ...inputs, [matchId]: { h: String(res.predicted_team_h_score), a: String(res.predicted_team_a_score) } })
     } catch (e) {
       alert('Prediction failed: ' + e)
     }
@@ -112,6 +103,8 @@ function Predictions({ token }) {
       if (!entry) return predicted_h === '' && predicted_a === ''
       return String(entry.predicted_team_h_score) === String(predicted_h) && String(entry.predicted_team_a_score) === String(predicted_a)
     })()
+    const homeLogo = teamLogos?.[match.team_h] || match.team_h_logo || null
+    const awayLogo = teamLogos?.[match.team_a] || match.team_a_logo || null
 
     return (
       <div key={match.id} className="match">
@@ -121,9 +114,9 @@ function Predictions({ token }) {
         <div className="teams">
           <div className="team home-team">
             <span className="team-name">{match.team_h_name}</span>
-            {match.team_h_logo && (
+            {homeLogo && (
               <img
-                src={match.team_h_logo}
+                src={homeLogo}
                 alt={match.team_h_name}
                 className="team-logo"
                 onError={(e) => { e.target.style.display = 'none' }}
@@ -134,9 +127,9 @@ function Predictions({ token }) {
           <span>vs</span>
           <input id={`a-${match.id}`} value={predicted_a} disabled={!canPredict} onChange={(e) => setInputs({ ...inputs, [match.id]: { ...(inputs[match.id] || {}), a: e.target.value } })} />
           <div className="team away-team">
-            {match.team_a_logo && (
+            {awayLogo && (
               <img
-                src={match.team_a_logo}
+                src={awayLogo}
                 alt={match.team_a_name}
                 className="team-logo"
                 onError={(e) => { e.target.style.display = 'none' }}
@@ -212,7 +205,7 @@ function Predictions({ token }) {
   )
 }
 
-export default function MainPage({ token, username, onLogout }) {
+export default function MainPage({ token, username, onLogout, teamLogos }) {
   const [tab, setTab] = useState('predictions')
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -247,9 +240,9 @@ export default function MainPage({ token, username, onLogout }) {
         </div>
       </header>
       <main>
-        {tab === 'predictions' && <Predictions token={token} />}
+        {tab === 'predictions' && <Predictions token={token} teamLogos={teamLogos} />}
         {tab === 'rank' && <RankPage username={username} />}
-        {tab === 'admin' && <AdminPage />}
+        {tab === 'admin' && <AdminPage teamLogos={teamLogos} />}
       </main>
     </div>
   )

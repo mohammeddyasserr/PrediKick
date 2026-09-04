@@ -10,7 +10,7 @@ function toLocalInput(dt){
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function AdminPage(){
+export default function AdminPage({ teamLogos = {} }){
   const [matches, setMatches] = useState([])
   const [form, setForm] = useState({ team_h: 1, team_a: 2, event: 1, kickoff_time: '' })
   const [editing, setEditing] = useState(null)
@@ -178,44 +178,49 @@ export default function AdminPage(){
 
       <div className="matches admin-matches">
         {filteredMatches.length > 0 ? (
-          filteredMatches.map(m=> (
-            <div key={m.id} className="match admin-match">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ color: '#888', marginRight: '4px' }}>#{m.id}</span>
-                {m.team_h_logo && (
-                  <img
-                    src={m.team_h_logo}
-                    alt={m.team_h_name}
-                    className="admin-team-logo"
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
-                )}
-                <strong>{m.team_h_name}</strong>
-                <span style={{ color: '#888', fontSize: '13px' }}>vs</span>
-                {m.team_a_logo && (
-                  <img
-                    src={m.team_a_logo}
-                    alt={m.team_a_name}
-                    className="admin-team-logo"
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
-                )}
-                <strong>{m.team_a_name}</strong>
-                <span className={`badge ${m.status}`} style={{ marginLeft: '8px' }}>
-                  {m.status}
-                </span>
-                {(m.status === 'ended' || m.team_h_score !== null) && (
-                  <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>
-                    ({m.team_h_score ?? '-'} - {m.team_a_score ?? '-'})
+          filteredMatches.map(m => {
+            const homeLogo = teamLogos?.[m.team_h] || m.team_h_logo || null
+            const awayLogo = teamLogos?.[m.team_a] || m.team_a_logo || null
+
+            return (
+              <div key={m.id} className="match admin-match">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#888', marginRight: '4px' }}>#{m.id}</span>
+                  {homeLogo && (
+                    <img
+                      src={homeLogo}
+                      alt={m.team_h_name}
+                      className="admin-team-logo"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                  )}
+                  <strong>{m.team_h_name}</strong>
+                  <span style={{ color: '#888', fontSize: '13px' }}>vs</span>
+                  {awayLogo && (
+                    <img
+                      src={awayLogo}
+                      alt={m.team_a_name}
+                      className="admin-team-logo"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                  )}
+                  <strong>{m.team_a_name}</strong>
+                  <span className={`badge ${m.status}`} style={{ marginLeft: '8px' }}>
+                    {m.status}
                   </span>
-                )}
+                  {(m.status === 'ended' || m.team_h_score !== null) && (
+                    <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>
+                      ({m.team_h_score ?? '-'} - {m.team_a_score ?? '-'})
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <button onClick={()=>startEdit(m)}>Edit</button>
+                  <button onClick={()=>remove(m.id)}>Delete</button>
+                </div>
               </div>
-              <div>
-                <button onClick={()=>startEdit(m)}>Edit</button>
-                <button onClick={()=>remove(m.id)}>Delete</button>
-              </div>
-            </div>
-          ))
+            )
+          })
         ) : (
           <p style={{ textAlign: 'center', color: '#666', gridColumn: 'span 2' }}>No matches found for this gameweek.</p>
         )}
