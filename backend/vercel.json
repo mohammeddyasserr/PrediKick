@@ -11,6 +11,12 @@
       "src": "/(.*)",
       "dest": "app/main.py"
     }
+  ],
+  "crons": [
+    {
+      "path": "/internal/sync-matches",
+      "schedule": "0 * * * *"
+    }
   ]
 }
 
