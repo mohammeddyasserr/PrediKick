@@ -18,7 +18,13 @@ def sync_matches(db: Session):
 
     api_matches = response.json()
 
-    # Only matches that haven't started yet
+    # Get all match keys from the API response
+    all_api_match_keys = {
+    (match["team_h"], match["team_a"])
+    for match in api_matches
+    }
+
+    # Only consider matches that haven't started yet
     api_matches = [
         match for match in api_matches
         if match["started"] is False
@@ -104,7 +110,7 @@ def sync_matches(db: Session):
 
         key = (match.team_h, match.team_a)
 
-        if key not in api_match_keys:
+        if key not in all_api_match_keys:
             db.delete(match)
             deleted_count += 1
 
