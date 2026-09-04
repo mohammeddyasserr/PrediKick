@@ -28,49 +28,68 @@ function Predictions({ token, teamLogos }) {
   const [inputs, setInputs] = useState({})
   const [eventsList, setEventsList] = useState([])
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [isLoadingMatches, setIsLoadingMatches] = useState(true)
 
   useEffect(() => {
+    let active = true
+
     async function load() {
-      const [m, p] = await Promise.all([api.get('/matches/'), api.get('/predictions/')])
-      const matchesList = m || []
-      const predsList = p || []
+      setIsLoadingMatches(true)
+      try {
+        const [m, p] = await Promise.all([api.get('/matches/'), api.get('/predictions/')])
+        if (!active) return
+        const matchesList = m || []
+        const predsList = p || []
 
-      setMatches(matchesList)
-      setPreds(predsList)
+        setMatches(matchesList)
+        setPreds(predsList)
 
-      const map = {}
-      const iv = {}
-      predsList.forEach(x => { map[x.match_id] = x; iv[x.match_id] = { h: String(x.predicted_team_h_score), a: String(x.predicted_team_a_score) } })
+        const map = {}
+        const iv = {}
+        predsList.forEach(x => { map[x.match_id] = x; iv[x.match_id] = { h: String(x.predicted_team_h_score), a: String(x.predicted_team_a_score) } })
 
-      matchesList.forEach(mm => {
-        if (!iv[mm.id]) iv[mm.id] = { h: '', a: '' }
-      })
+        matchesList.forEach(mm => {
+          if (!iv[mm.id]) iv[mm.id] = { h: '', a: '' }
+        })
 
-      setLocal(map)
-      setInputs(iv)
+        setLocal(map)
+        setInputs(iv)
 
-      const uniqueEvents = Array.from(new Set(matchesList.map(x => x.event))).sort((a, b) => a - b)
-      setEventsList(uniqueEvents)
+        const uniqueEvents = Array.from(new Set(matchesList.map(x => x.event))).sort((a, b) => a - b)
+        setEventsList(uniqueEvents)
 
-      if (uniqueEvents.length > 0) {
-        const scheduled = matchesList.filter(x => x.status === 'scheduled')
-        if (scheduled.length > 0) {
-          scheduled.sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time))
-          setSelectedEvent(scheduled[0].event)
-        } else {
-          const ended = matchesList.filter(x => x.status === 'ended')
-          if (ended.length > 0) {
-            ended.sort((a, b) => new Date(b.kickoff_time) - new Date(a.kickoff_time))
-            setSelectedEvent(ended[0].event)
+        if (uniqueEvents.length > 0) {
+          const scheduled = matchesList.filter(x => x.status === 'scheduled')
+          if (scheduled.length > 0) {
+            scheduled.sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time))
+            setSelectedEvent(scheduled[0].event)
           } else {
-            setSelectedEvent(uniqueEvents[0])
+            const ended = matchesList.filter(x => x.status === 'ended')
+            if (ended.length > 0) {
+              ended.sort((a, b) => new Date(b.kickoff_time) - new Date(a.kickoff_time))
+              setSelectedEvent(ended[0].event)
+            } else {
+              setSelectedEvent(uniqueEvents[0])
+            }
           }
+        } else {
+          setSelectedEvent(1)
         }
-      } else {
+      } catch (e) {
+        if (!active) return
+        setMatches([])
+        setPreds([])
+        setLocal({})
+        setInputs({})
+        setEventsList([])
         setSelectedEvent(1)
+      } finally {
+        if (active) setIsLoadingMatches(false)
       }
     }
     load()
+
+    return () => { active = false }
   }, [])
 
   async function createPrediction(matchId) {
@@ -195,7 +214,12 @@ function Predictions({ token, teamLogos }) {
       </div>
 
       <div className="matches">
-        {filteredMatches.length > 0 ? (
+        {isLoadingMatches ? (
+          <div className="loading-indicator" role="status" aria-live="polite">
+            <span className="spinner" aria-hidden="true" />
+            <span>Loading matches...</span>
+          </div>
+        ) : filteredMatches.length > 0 ? (
           filteredMatches.map(renderMatch)
         ) : (
           <p style={{ textAlign: 'center', color: '#666' }}>No matches found for this gameweek.</p>
