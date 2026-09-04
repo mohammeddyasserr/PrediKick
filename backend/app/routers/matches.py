@@ -17,6 +17,10 @@ from app.dependencies.auth import (
     get_current_user,
     require_admin
 )
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 
 
 router = APIRouter(
@@ -25,7 +29,8 @@ router = APIRouter(
 )
 
 
-FPL_FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/"
+FPL_FIXTURES_URL = os.getenv("FPL_FIXTURES_URL")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
 
 
 # =========================
@@ -170,7 +175,6 @@ def sync_matches_from_fpl(db: Session) -> dict:
     return fpl_minutes_map
 
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
 
 
 def get_team_logo(team_id: int):
