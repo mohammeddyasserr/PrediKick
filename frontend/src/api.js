@@ -1,11 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_BASE 
 
-let _token = null
-export function setToken(t){ _token = t; _cache.clear(); _inFlight.clear(); }
-export function clearToken(){ _token = null; _cache.clear(); _inFlight.clear(); }
+export function setToken(t){
+  // tokens are now stored in HttpOnly cookies on the backend; JS should not hold them
+  return t
+}
+
+export function clearToken(){
+  return null
+}
 
 function authHeaders() {
-  return _token ? { Authorization: `Bearer ${_token}` } : {}
+  return {}
 }
 
 // Simple in-memory cache/in-flight dedupe for GET requests during dev
@@ -15,6 +20,7 @@ const _inFlight = new Map()
 export async function post(path, body) {
   const res = await fetch(API_BASE + path, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders()
@@ -32,13 +38,13 @@ export async function post(path, body) {
 }
 
 export async function get(path) {
-  // include token in cache key so responses tied to auth don't leak
-  const key = `${path}::${_token || ''}`
+  const key = `${path}::cookie-session`
   if (_cache.has(key)) return _cache.get(key)
   if (_inFlight.has(key)) return _inFlight.get(key)
 
   const promise = (async () => {
     const res = await fetch(API_BASE + path, {
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders()
@@ -57,6 +63,7 @@ export async function get(path) {
 export async function put(path, body) {
   const res = await fetch(API_BASE + path, {
     method: 'PUT',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders()
@@ -76,6 +83,7 @@ export async function put(path, body) {
 export async function del(path) {
   const res = await fetch(API_BASE + path, {
     method: 'DELETE',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders()

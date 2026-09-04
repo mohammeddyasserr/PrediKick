@@ -4,12 +4,30 @@ import MainPage from './pages/MainPage'
 import api from './api'
 
 export default function App() {
-  const [token, setToken] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [username, setUsername] = useState(null)
   const [teamLogos, setTeamLogos] = useState({})
 
   useEffect(() => {
-    if (!token) {
+    let active = true
+
+    api.get('/me')
+      .then((user) => {
+        if (!active) return
+        setIsAuthenticated(true)
+        setUsername(user?.email || user?.username || null)
+      })
+      .catch(() => {
+        if (!active) return
+        setIsAuthenticated(false)
+        setUsername(null)
+      })
+
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       setTeamLogos({})
       return
     }
@@ -30,26 +48,22 @@ export default function App() {
       })
 
     return () => { active = false }
-  }, [token])
+  }, [isAuthenticated])
 
-  function handleLogin(tok){
-    api.setToken(tok)
-    setToken(tok)
-    try{
-      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
-      const meta = p.user_metadata || {}
-      setUsername(meta.username || p.email || null)
-    }catch(e){/* ignore */}
+  function handleLogin(name){
+    setIsAuthenticated(true)
+    setUsername(name || 'User')
   }
 
   function handleLogout(){
-    api.clearToken()
-    setToken(null)
+    api.post('/auth/logout', {})
+      .catch(() => {})
+    setIsAuthenticated(false)
     setUsername(null)
     setTeamLogos({})
   }
 
-  if (!token) return <AuthPage onLogin={handleLogin} />
+  if (!isAuthenticated) return <AuthPage onLogin={handleLogin} />
 
-  return <MainPage token={token} username={username} onLogout={handleLogout} teamLogos={teamLogos} />
+  return <MainPage token={null} username={username} onLogout={handleLogout} teamLogos={teamLogos} />
 }

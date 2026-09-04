@@ -62,8 +62,8 @@ export default function AuthPage({ onLogin }) {
           password: form.password
         })
 
-        if (res.access_token) {
-          onLogin(res.access_token)
+        if (res.message === 'Login successful' || res.user_id) {
+          onLogin(form.username)
         } else {
           setErr(res.detail || 'Login failed')
         }
