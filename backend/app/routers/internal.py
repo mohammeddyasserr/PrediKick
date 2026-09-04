@@ -25,8 +25,13 @@ def sync_matches_endpoint(
             status_code=403,
             detail="Unauthorized"
         )
-
-    result = sync_matches(db)
+    try:
+        result = sync_matches(db)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error occurred while syncing matches: {str(e)}"
+        )
 
     return {
         "message": "Match synchronization completed",
